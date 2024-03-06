@@ -2,6 +2,7 @@ import warnings
 from PyQt5.QtWidgets import QWidget, QSizePolicy, QVBoxLayout, QHBoxLayout
 from PyQt5.QtWidgets import QListView, QPushButton, QComboBox, QLabel
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
+from cpu_monitor import CPUWatcher
 
 # Suppress DeprecationWarning for sipPyTypeDict
 warnings.filterwarnings("ignore", category=DeprecationWarning)
