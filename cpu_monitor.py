@@ -1,7 +1,7 @@
 import psutil
 import time
 import argparse
-from PyQt5.QtCore import QObject, pyqtSignal
+from PyQt5.QtCore import QThread, pyqtSignal
 
 __doc__ = """Collect real-time data on CPU performance for certain processes
 Allows passing the data to consumers using pipelines
@@ -9,11 +9,13 @@ Allows passing the data to consumers using pipelines
 
 
 # noinspection PyUnresolvedReferences
-class CPUWatcher(QObject):
+class CPUWatcher(QThread):
     stopped = pyqtSignal()
+    new_data = pyqtSignal(list)
 
-    def __init__(self, watched_processes, interval):
-        super().__init__()
+    def __init__(self, watched_processes, interval=1, parent=None):
+        super().__init__(parent)
+        self.is_running = True
         self.watched_processes = watched_processes
         self.interval = interval
         self.process_list = []
@@ -32,10 +34,11 @@ class CPUWatcher(QObject):
             return process_list
         return [proc for proc in process_list if proc['name'].startswith(filter_str)]
 
-    def watch(self):
+    def run(self):
         while self.is_running:
             cpu_usage = self.get_cpu_usage()
             self.cpu_usage_history.append(cpu_usage)
+            self.new_data.emit(self.cpu_usage_history)
             time.sleep(self.interval)
         self.stopped.emit()
 
