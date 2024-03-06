@@ -7,6 +7,7 @@ import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 
+# noinspection PyUnresolvedReferences
 class ProcessManagementWidget(QWidget):
     def __init__(self, cpu_watcher):
         super().__init__()

@@ -34,11 +34,9 @@ class MainWindow(QMainWindow):
         self.close()
 
 
-
 def main():
     app = QApplication(sys.argv)
-    cpu_watcher = CPUWatcher([], interval=1)  # Empty list of processes initially
-
+    cpu_watcher = CPUWatcher([], interval=1)
     window = MainWindow(cpu_watcher)
     window.show()
 

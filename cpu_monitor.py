@@ -24,12 +24,13 @@ class CPUWatcher(QThread):
 
     def get_processes(self):
         if not self.process_list:
-            self.process_list = [{'pid': proc.info['pid'], 'name': proc.info['name']} for proc in psutil.process_iter(['pid', 'name'])]
+            self.process_list = [
+                {'pid': proc.info['pid'], 'name': proc.info['name']} for proc in psutil.process_iter(['pid', 'name'])
+            ]
         return self.process_list
 
     def filter_processes(self, filter_str):
         process_list = self.get_processes()
-        # print(f'DEBUG: filter_processes()')
         if not filter_str:
             return process_list
         return [proc for proc in process_list if proc['name'].startswith(filter_str)]
@@ -54,6 +55,7 @@ class CPUWatcher(QThread):
                 cpu_usage[pid] = usage_normalized
             except psutil.NoSuchProcess:
                 cpu_usage[pid] = None
+        print(f'cpu_usage={cpu_usage}')
         return cpu_usage
 
     def stop(self):
