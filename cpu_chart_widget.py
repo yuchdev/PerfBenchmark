@@ -39,3 +39,38 @@ class CPUChartWidget(QWidget):
         self.cpu_ax.set_ylabel('CPU Usage (%)')
         self.cpu_ax.legend()
         self.cpu_chart.canvas.draw()
+
+    def update_chart2(self, cpu_usage_history: list):
+        """
+        Accepts a list of dictionaries containing CPU usage of each process
+        Usually updates with single point
+        :param cpu_usage_history: list of dictionaries containing CPU usage of each process
+        """
+        self.cpu_ax.clear()
+        timestamps = []
+        usages = []
+        for process_data in cpu_usage_history:
+            for entry in process_data.values():
+                timestamps.append(entry['timestamp'])
+                usages.append(entry['usage'])
+        self.cpu_ax.plot(timestamps, usages)
+        self.cpu_ax.set_xlabel('Time (ticks)')
+        self.cpu_ax.set_ylabel('CPU Usage (%)')
+        self.cpu_chart.canvas.draw()
+
+    def update_chart3(self, cpu_usage_history: list):
+        """
+        Accepts a list of dictionaries containing CPU usage of each process
+        Usually updates with single point
+        :param cpu_usage_history: list of dictionaries containing CPU usage of each process
+        """
+        self.cpu_ax.clear()
+        usages = []
+        for process_data in cpu_usage_history:
+            for entry in process_data.values():
+                usages.append(entry['usage'])
+        ticks = range(1, len(usages) + 1)
+        self.cpu_ax.plot(ticks, usages)
+        self.cpu_ax.set_xlabel('Time (ticks)')
+        self.cpu_ax.set_ylabel('CPU Usage (%)')
+        self.cpu_chart.canvas.draw()

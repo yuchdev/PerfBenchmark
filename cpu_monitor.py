@@ -67,16 +67,39 @@ class CPUWatcher(QThread):
             time.sleep(self.interval)
         self.stopped.emit()
 
+    def get_cpu_usage2(self):
+        """
+        Get CPU usage for watched processes
+        Real usage may exceed 100% if there are more than one core,
+        we normalize it to 100% by dividing by the number of cores
+        :return: tuple
+        """
+        cpu_usage = {}
+        num_cores = psutil.cpu_count()
+        watched_processes = [proc['pid'] for proc in self.get_processes() if proc['name'] in self.watched_processes]
+        timestamp = time.time()
+        for pid in watched_processes:
+            try:
+                process = psutil.Process(pid)
+                usage_percent = process.cpu_percent(interval=self.interval)
+                usage_normalized = usage_percent / num_cores
+                cpu_usage[pid] = {'usage': usage_normalized, 'timestamp': timestamp, 'process_name': ''}
+            except psutil.NoSuchProcess:
+                cpu_usage[pid] = None
+        print(f'cpu_usage={cpu_usage}')
+        return cpu_usage
+
     def get_cpu_usage(self):
         """
         Get CPU usage for watched processes
         Real usage may exceed 100% if there are more than one core,
         we normalize it to 100% by dividing by the number of cores
-        :return:
+        :return: tuple
         """
         cpu_usage = {}
         num_cores = psutil.cpu_count()
         watched_processes = [proc['pid'] for proc in self.get_processes() if proc['name'] in self.watched_processes]
+        timestamp = time.time()
         for pid in watched_processes:
             try:
                 process = psutil.Process(pid)
