@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QTa
 
 from process_management_widget import ProcessManagementWidget
 from cpu_chart_widget import CPUChartWidget
-from cpu_monitor import CPUWatcher
+from cpu_watcher import CPUWatcher
 from database_widget import DatabaseWidget
 
 
