@@ -1,55 +1,13 @@
 import json
 import os
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QTabWidget, QVBoxLayout
-from PyQt5.QtWidgets import QDialogButtonBox, QCheckBox, QDialog, QAction
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QTabWidget, QVBoxLayout, QAction
 
 from process_management_widget import ProcessManagementWidget
 from cpu_chart_widget import CPUChartWidget
 from cpu_watcher import CPUWatcher
 from database_widget import DatabaseWidget
-
-DEFAULT_SETTINGS = {
-    "rewrite_database": False
-}
-
-class SettingsWidget(QDialog):
-    """
-    Widget representing modal window Settings
-    """
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Settings")
-
-        layout = QVBoxLayout()
-
-        # Add setting for "Rewrite Database on Startup"
-        self.rewrite_database_checkbox = QCheckBox("Rewrite Database on Startup")
-        layout.addWidget(self.rewrite_database_checkbox)
-
-        # Add buttons
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        button_box.accepted.connect(self.accept)
-        button_box.rejected.connect(self.reject)
-        layout.addWidget(button_box)
-
-        self.setLayout(layout)
-
-    def get_settings(self):
-        """
-        Get current settings
-        """
-        settings = {
-            "rewrite_database": self.rewrite_database_checkbox.isChecked()
-        }
-        return settings
-
-    def set_settings(self, settings):
-        """
-        Set settings
-        """
-        self.rewrite_database_checkbox.setChecked(settings.get("rewrite_database", False))
+from settings_widget import SettingsWidget, DEFAULT_SETTINGS
 
 
 # noinspection PyPep8Naming
@@ -104,6 +62,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(tab_widget)
 
         self.cpu_watcher.new_data.connect(self.cpu_chart_widget.update_chart)
+        self.cpu_watcher.insert_record.connect(self.database_widget.insert_cpu_workload)
         self.cpu_watcher.stopped.connect(self.thread_stopped)
 
         self.create_menu()
