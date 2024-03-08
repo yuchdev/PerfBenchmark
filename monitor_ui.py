@@ -1,10 +1,55 @@
+import json
+import os
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QTabWidget, QVBoxLayout, QAction
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QTabWidget, QVBoxLayout
+from PyQt5.QtWidgets import QDialogButtonBox, QCheckBox, QDialog, QAction
 
 from process_management_widget import ProcessManagementWidget
 from cpu_chart_widget import CPUChartWidget
 from cpu_watcher import CPUWatcher
 from database_widget import DatabaseWidget
+
+DEFAULT_SETTINGS = {
+    "rewrite_database": False
+}
+
+class SettingsWidget(QDialog):
+    """
+    Widget representing modal window Settings
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Settings")
+
+        layout = QVBoxLayout()
+
+        # Add setting for "Rewrite Database on Startup"
+        self.rewrite_database_checkbox = QCheckBox("Rewrite Database on Startup")
+        layout.addWidget(self.rewrite_database_checkbox)
+
+        # Add buttons
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+
+        self.setLayout(layout)
+
+    def get_settings(self):
+        """
+        Get current settings
+        """
+        settings = {
+            "rewrite_database": self.rewrite_database_checkbox.isChecked()
+        }
+        return settings
+
+    def set_settings(self, settings):
+        """
+        Set settings
+        """
+        self.rewrite_database_checkbox.setChecked(settings.get("rewrite_database", False))
 
 
 # noinspection PyPep8Naming
@@ -13,6 +58,8 @@ class MainWindow(QMainWindow):
     Application main window
     Assume width 90% of screen width and height 80% of screen height
     """
+
+    SETTINGS_FILE = "settings.json"
 
     def __init__(self, cpu_watcher: CPUWatcher):
         """
@@ -30,11 +77,13 @@ class MainWindow(QMainWindow):
         screen_height = desktop.height()
         self.setGeometry(20, 20, int(screen_width * 0.9), int(screen_height * 0.8))
 
+        self.settings = self.load_settings()
+
         # Widgets
         self.cpu_watcher = cpu_watcher
         self.cpu_chart_widget = CPUChartWidget(self)
         self.process_management_widget = ProcessManagementWidget(cpu_watcher)
-        self.database_widget = DatabaseWidget()
+        self.database_widget = DatabaseWidget(self.settings['rewrite_database'])
 
         # Create tabs
         tab_widget = QTabWidget()
@@ -63,7 +112,7 @@ class MainWindow(QMainWindow):
         menubar = self.menuBar()
 
         # Monitoring menu
-        monitoring_menu = menubar.addMenu("CPU")
+        monitoring_menu = menubar.addMenu("Monitoring")
         start_action = QAction("Start", self)
         stop_action = QAction("Stop", self)
         monitoring_menu.addAction(start_action)
@@ -73,8 +122,12 @@ class MainWindow(QMainWindow):
         database_menu = menubar.addMenu("Data")
         export_action = QAction("Export...", self)
         import_action = QAction("Import...", self)
+        settings_action = QAction("Settings...", self)
         database_menu.addAction(export_action)
         database_menu.addAction(import_action)
+
+        settings_action.triggered.connect(self.show_settings)
+        database_menu.addAction(settings_action)
 
         # About menu
         help_menu = menubar.addMenu("Help")
@@ -96,6 +149,37 @@ class MainWindow(QMainWindow):
         Close the window when the CPU watcher thread is stopped
         """
         self.close()
+
+    def load_settings(self):
+        """
+        Load settings from settings.json, if file doesn't exist, create it with default settings
+        """
+        if not os.path.isfile(self.SETTINGS_FILE):
+            with open(self.SETTINGS_FILE, "w") as f:
+                json.dump(DEFAULT_SETTINGS, f)
+
+        with open(self.SETTINGS_FILE, "r") as f:
+            settings = json.load(f)
+
+        return settings
+
+    def save_settings(self):
+        """
+        Save settings to settings.json
+        """
+        settings_widget = SettingsWidget()
+        current_settings = settings_widget.get_settings()
+        with open(self.SETTINGS_FILE, "w") as f:
+            json.dump(current_settings, f)
+
+    def show_settings(self):
+        """
+        Show settings window
+        """
+        settings_widget = SettingsWidget(self)
+        settings_widget.set_settings(self.settings)
+        if settings_widget.exec_():
+            self.settings = settings_widget.get_settings()
 
 
 def main():

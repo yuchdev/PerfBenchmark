@@ -6,8 +6,17 @@ from PyQt5.QtSql import QSqlDatabase, QSqlQuery, QSqlTableModel
 from PyQt5.QtWidgets import QHeaderView
 
 
+
 class DatabaseWidget(QWidget):
-    def __init__(self):
+    CREATE_CPU_WORKLOAD = "CREATE TABLE IF NOT EXISTS CpuWorkload " \
+                          "(ID INTEGER PRIMARY KEY AUTOINCREMENT, " \
+                          "Timestamp INTEGER, PID INTEGER, ProcessName TEXT, Workload REAL)"
+    CREATE_SYSTEM_EVENTS = "CREATE TABLE IF NOT EXISTS SystemEvents " \
+                           "(ID INTEGER PRIMARY KEY AUTOINCREMENT, Timestamp TEXT, Event TEXT)"
+    INSERT_CPU_WORKLOAD = "INSERT INTO CpuWorkload (Timestamp, PID, ProcessName, Workload) " \
+                           "VALUES (:timestamp, :pid, :process_name, :workload)"
+
+    def __init__(self, rewrite_database):
         super().__init__()
         self.models_layout = None
         self.cpu_workload_table = None
@@ -15,6 +24,7 @@ class DatabaseWidget(QWidget):
         self.button_panel_layout = None
         self.layout = None
         self.db = None
+        self.rewrite_database = rewrite_database
         self.cpu_workload_model = QSqlTableModel()
         self.system_events_model = QSqlTableModel()
         self.init_ui()
@@ -62,20 +72,37 @@ class DatabaseWidget(QWidget):
         self.button_panel_layout.addWidget(button)
 
     def create_db(self):
+        name = "CpuMetrics"
+        if os.path.exists(name) and self.rewrite_database is False:
+            self.db = QSqlDatabase.addDatabase("QSQLITE")
+            self.db.setDatabaseName(name)
+            if not self.db.open():
+                print("Failed to open database!")
+                return
+            else:
+                print("Database opened successfully!")
+                # Setup table models after database open
+                self.setup_table_models()
+                return
+
         dialog = QDialog(self)
         dialog.setWindowTitle("Create Database")
         layout = QVBoxLayout()
 
         label = QLabel("Database Name:")
-        edit = QLineEdit("CpuMetrics")
+        edit = QLineEdit(name)
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
 
         def create():
             name = edit.text()
-            if os.path.exists(name):
+            if os.path.exists(name) and self.rewrite_database is False:
                 print("Database file already exists, exiting")
                 dialog.reject()
                 return
+            elif os.path.exists(name) and self.rewrite_database is True:
+                print("Database file already exists, delete")
+                os.remove(name)
+
             self.db = QSqlDatabase.addDatabase("QSQLITE")
             self.db.setDatabaseName(name)
             if not self.db.open():
@@ -125,14 +152,8 @@ class DatabaseWidget(QWidget):
 
     def create_tables(self):
         query = QSqlQuery()
-        query.exec_(
-            "CREATE TABLE IF NOT EXISTS CpuWorkload "
-            "(ID INTEGER PRIMARY KEY AUTOINCREMENT, Timestamp TEXT, PID INTEGER, ProcessName TEXT, Workload REAL)"
-        )
-        query.exec_(
-            "CREATE TABLE IF NOT EXISTS SystemEvents "
-            "(ID INTEGER PRIMARY KEY AUTOINCREMENT, Timestamp TEXT, Event TEXT)"
-        )
+        query.exec_(self.CREATE_CPU_WORKLOAD)
+        query.exec_(self.CREATE_SYSTEM_EVENTS)
         if query.lastError().isValid():
             print("Failed to create tables:", query.lastError().text())
         else:
@@ -141,12 +162,13 @@ class DatabaseWidget(QWidget):
     def insert_metric(self, cpu_usage_history):
         """
         Inserts a new metric record into the CpuWorkload table
-        :param cpu_usage: dictionary containing CPU usage data
+        :param cpu_usage_history: dictionary containing CPU usage data
         """
         # Prepare the query to insert the record
         cpu_usage = cpu_usage_history[-1]
         query = QSqlQuery()
-        query.prepare("INSERT INTO CpuWorkload (Timestamp, PID, ProcessName, Workload) VALUES (:timestamp, :pid, :process_name, :workload)")
+        query.prepare(
+            "INSERT INTO CpuWorkload (Timestamp, PID, ProcessName, Workload) VALUES (:timestamp, :pid, :process_name, :workload)")
         query.bindValue(":timestamp", cpu_usage['timestamp'])
         query.bindValue(":pid", cpu_usage['pid'])
         query.bindValue(":process_name", cpu_usage['process_name'])
@@ -180,3 +202,17 @@ class DatabaseWidget(QWidget):
     def backup_db(self):
         # Implement the backup functionality
         pass
+
+    def insert_cpu_workload(self, timestamp, pid, process_name, workload):
+        query = QSqlQuery()
+        query.prepare(self.INSERT_CPU_WORKLOAD)
+        query.bindValue(":timestamp", timestamp)
+        query.bindValue(":pid", pid)
+        query.bindValue(":process_name", process_name)
+        query.bindValue(":workload", workload)
+
+        if not query.exec_():
+            print("Failed to insert metric:", query.lastError().text())
+        else:
+            print("Metric inserted successfully!")
+            self.cpu_workload_model.select()

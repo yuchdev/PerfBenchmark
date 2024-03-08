@@ -129,6 +129,11 @@ class ProcessManagementWidget(QWidget):
         """
         Reset CPUWatcher and start monitoring the selected processes
         """
+        self.start_button.setEnabled(False)
+        self.stop_button.setEnabled(True)
+        if self.cpu_watcher.is_paused:
+            self.cpu_watcher.resume()
+            return
         selected_processes = [self.process_list_model.item(i).text() for i in range(self.process_list_model.rowCount())]
         self.cpu_watcher.watched_processes = selected_processes
         self.cpu_watcher.cpu_usage_history = []
@@ -138,3 +143,6 @@ class ProcessManagementWidget(QWidget):
 
     def stop_monitoring(self):
         self.cpu_watcher.pause()
+        self.start_button.setEnabled(True)
+        self.stop_button.setEnabled(False)
+        self.start_button.setText('Resume Monitoring')
