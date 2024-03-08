@@ -50,6 +50,9 @@ class ProcessManagementWidget(QWidget):
         self.start_button = QPushButton("Start Monitoring")
         self.start_button.clicked.connect(self.start_monitoring)
 
+        self.stop_button = QPushButton("Stop Monitoring")
+        self.stop_button.clicked.connect(self.stop_monitoring)
+
         self.init_ui()
 
     def init_ui(self):
@@ -75,6 +78,7 @@ class ProcessManagementWidget(QWidget):
         main_layout.addLayout(filter_layout)
         main_layout.addLayout(list_layout)
         main_layout.addWidget(self.start_button)
+        main_layout.addWidget(self.stop_button)
 
         self.setLayout(main_layout)
 
@@ -91,7 +95,7 @@ class ProcessManagementWidget(QWidget):
         Update the filtered processes based on the entered text
         """
         self.filtered_processes = self.cpu_watcher.filter_processes(text)
-        extracted_names = [proc['name'] for proc in self.filtered_processes]
+        extracted_names = [name for pid, name in self.filtered_processes.items()]
         self.filter_list_model.clear()
         for name in extracted_names:
             item = QStandardItem(name)
@@ -128,6 +132,9 @@ class ProcessManagementWidget(QWidget):
         selected_processes = [self.process_list_model.item(i).text() for i in range(self.process_list_model.rowCount())]
         self.cpu_watcher.watched_processes = selected_processes
         self.cpu_watcher.cpu_usage_history = []
-        self.process_filter_edit.clear()
         self.process_list_model.clear()
+        self.update_filtered_processes(text="")
         self.cpu_watcher.start()
+
+    def stop_monitoring(self):
+        self.cpu_watcher.pause()
