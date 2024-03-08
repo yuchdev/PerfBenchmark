@@ -57,14 +57,16 @@ class ProcessManagementWidget(QWidget):
         Set up the layout and geometry of the widget
         Set size policy for widgets to maintain their size on resizing
         """
+
+        # Process filtering edit
+        filter_layout = QHBoxLayout()
         self.process_filter_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.add_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-
-        filter_layout = QHBoxLayout()
         filter_layout.addWidget(self.process_filter_label)
         filter_layout.addWidget(self.process_filter_edit)
         filter_layout.addWidget(self.add_button)
 
+        # Process list view and start monitoring button
         list_layout = QVBoxLayout()
         list_layout.addWidget(self.filter_list_view)
         list_layout.addWidget(self.process_list_view)
@@ -74,13 +76,15 @@ class ProcessManagementWidget(QWidget):
         main_layout.addLayout(list_layout)
         main_layout.addWidget(self.start_button)
 
+        self.setLayout(main_layout)
+
         # Turn off item edit and multiselect
         self.filter_list_view.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.process_list_view.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.filter_list_view.setSelectionMode(QAbstractItemView.SingleSelection)
         self.process_list_view.setSelectionMode(QAbstractItemView.SingleSelection)
 
-        self.setLayout(main_layout)
+        self.update_filtered_processes(text="")
 
     def update_filtered_processes(self, text: str):
         """
@@ -93,13 +97,18 @@ class ProcessManagementWidget(QWidget):
             item = QStandardItem(name)
             self.filter_list_model.appendRow(item)
 
+        # Select the first item in the list if it exists
+        if self.filter_list_model.rowCount() > 0:
+            first_index = self.filter_list_model.index(0, 0)
+            self.filter_list_view.setCurrentIndex(first_index)
+
     def press_add(self):
         """
         Add the selected process from the filtered list to the process list
         Ensure single selection
         """
         selected_index = self.filter_list_view.selectedIndexes()[0] if self.filter_list_view.selectedIndexes() else None
-        if selected_index:
+        if selected_index is not None:
             self.add_process(selected_index)
 
     def add_process(self, index):

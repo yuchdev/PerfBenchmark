@@ -29,7 +29,7 @@ class CPUChartWidget(QWidget):
         :param cpu_usage_history: list of PID and payload, e.g. [{1: 10, 2: 20}, {1: 20, 2: 30}]
         """
         self.cpu_ax.clear()
-        for pid, usage in cpu_usage_history[-1].items():
+        for pid, (usage, _) in cpu_usage_history[-1].items():
             self.cpu_ax.plot(
                 range(len(cpu_usage_history)), [
                     process_usage.get(pid, 0) for process_usage in cpu_usage_history
