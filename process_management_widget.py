@@ -1,6 +1,6 @@
 import warnings
 from PyQt5.QtWidgets import QWidget, QSizePolicy, QVBoxLayout, QHBoxLayout
-from PyQt5.QtWidgets import QListView, QPushButton, QComboBox, QLabel
+from PyQt5.QtWidgets import QListView, QPushButton, QLabel, QLineEdit, QAbstractItemView
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from cpu_monitor import CPUWatcher
 
@@ -26,19 +26,22 @@ class ProcessManagementWidget(QWidget):
         assert isinstance(cpu_watcher, CPUWatcher)
         self.cpu_watcher = cpu_watcher
         self.filtered_processes = []
-        self.debug_call_depth = 0
 
-        # Dropdown for filtering processes
+        # Line Edit for filtering processes
         self.process_filter_label = QLabel("Filter:")
-        self.process_filter_combobox = QComboBox()
-        self.process_filter_combobox.setEditable(True)
-        self.process_filter_combobox.lineEdit().textChanged.connect(self.update_filtered_processes)
+        self.process_filter_edit = QLineEdit()
+        self.process_filter_edit.textChanged.connect(self.update_filtered_processes)
 
-        # 'Add' button
+        # Button for adding processes
         self.add_button = QPushButton("Add")
-        self.add_button.clicked.connect(self.add_process)
+        self.add_button.clicked.connect(self.press_add)
 
-        # Process list
+        # List Views for filtered processes and selected processes
+        self.filter_list_model = QStandardItemModel()
+        self.filter_list_view = QListView()
+        self.filter_list_view.setModel(self.filter_list_model)
+        self.filter_list_view.doubleClicked.connect(self.add_process)
+
         self.process_list_model = QStandardItemModel()
         self.process_list_view = QListView()
         self.process_list_view.setModel(self.process_list_model)
@@ -54,61 +57,68 @@ class ProcessManagementWidget(QWidget):
         Set up the layout and geometry of the widget
         Set size policy for widgets to maintain their size on resizing
         """
-        process_filter_layout = QHBoxLayout()
-
         self.process_filter_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.add_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
-        process_filter_layout.addWidget(self.process_filter_label)
-        process_filter_layout.addWidget(self.process_filter_combobox, stretch=1)  # Add stretch factor to QComboBox
-        process_filter_layout.addWidget(self.add_button)
+        filter_layout = QHBoxLayout()
+        filter_layout.addWidget(self.process_filter_label)
+        filter_layout.addWidget(self.process_filter_edit)
+        filter_layout.addWidget(self.add_button)
+
+        list_layout = QVBoxLayout()
+        list_layout.addWidget(self.filter_list_view)
+        list_layout.addWidget(self.process_list_view)
 
         main_layout = QVBoxLayout()
-        main_layout.addLayout(process_filter_layout)
-        main_layout.addWidget(self.process_list_view)
+        main_layout.addLayout(filter_layout)
+        main_layout.addLayout(list_layout)
         main_layout.addWidget(self.start_button)
+
+        # Turn off item edit and multiselect
+        self.filter_list_view.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.process_list_view.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.filter_list_view.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.process_list_view.setSelectionMode(QAbstractItemView.SingleSelection)
 
         self.setLayout(main_layout)
 
     def update_filtered_processes(self, text: str):
         """
         Update the filtered processes based on the entered text
-        Every time we have to reconnect the textChanged signal,
-        because otherwise the signal will be emitted indefinitely
         """
-        assert isinstance(text, str)
-        # Disconnect the textChanged signal temporarily
-        self.process_filter_combobox.lineEdit().textChanged.disconnect(self.update_filtered_processes)
-
-        # Update filtered processes based on the entered text
         self.filtered_processes = self.cpu_watcher.filter_processes(text)
         extracted_names = [proc['name'] for proc in self.filtered_processes]
+        self.filter_list_model.clear()
+        for name in extracted_names:
+            item = QStandardItem(name)
+            self.filter_list_model.appendRow(item)
 
-        # Clear the current items and add the extracted process names
-        self.process_filter_combobox.clear()
-        self.process_filter_combobox.addItems(extracted_names)
-
-        # Open the dropdown if there is more than one item
-        if len(extracted_names) > 1:
-            self.process_filter_combobox.showPopup()
-
-        # Reconnect the textChanged signal
-        self.process_filter_combobox.lineEdit().textChanged.connect(self.update_filtered_processes)
-
-    def add_process(self):
+    def press_add(self):
         """
-        Create a new item and add it to the model
+        Add the selected process from the filtered list to the process list
+        Ensure single selection
         """
-        process_name = self.process_filter_combobox.currentText()
-        if process_name:
-            item = QStandardItem(process_name)
-            self.process_list_model.appendRow(item)
+        selected_index = self.filter_list_view.selectedIndexes()[0] if self.filter_list_view.selectedIndexes() else None
+        if selected_index:
+            self.add_process(selected_index)
+
+    def add_process(self, index):
+        """
+        Add the double-clicked process from the filtered list to the process list
+        """
+        item = self.filter_list_model.itemFromIndex(index)
+        process_name = item.text()
+        self.process_list_model.appendRow(QStandardItem(process_name))
+        self.process_filter_edit.clear()
+        self.filter_list_model.clear()
 
     def start_monitoring(self):
         """
         Reset CPUWatcher and start monitoring the selected processes
         """
-        selected_processes = [self.process_list_view.model().item(i).text() for i in range(self.process_list_view.model().rowCount())]
+        selected_processes = [self.process_list_model.item(i).text() for i in range(self.process_list_model.rowCount())]
         self.cpu_watcher.watched_processes = selected_processes
         self.cpu_watcher.cpu_usage_history = []
+        self.process_filter_edit.clear()
+        self.process_list_model.clear()
         self.cpu_watcher.start()
