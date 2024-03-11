@@ -7,6 +7,8 @@ from PyQt5.QtWidgets import QHeaderView
 
 
 class DatabaseWidget(QWidget):
+
+    database_name = "CpuMetrics"
     CREATE_CPU_WORKLOAD = "CREATE TABLE IF NOT EXISTS CpuWorkload " \
                           "(ID INTEGER PRIMARY KEY AUTOINCREMENT, " \
                           "Timestamp INTEGER, PID INTEGER, ProcessName TEXT, Workload REAL)"
@@ -27,6 +29,8 @@ class DatabaseWidget(QWidget):
         self.cpu_workload_model = QSqlTableModel()
         self.system_events_model = QSqlTableModel()
         self.init_ui()
+        if os.path.isfile(self.database_name):
+            self.open_db()
 
     def init_ui(self):
         self.layout = QVBoxLayout(self)
@@ -45,81 +49,36 @@ class DatabaseWidget(QWidget):
         self.models_layout.addWidget(self.system_events_table)
         self.layout.addLayout(self.models_layout)
 
-        # Set up the database models
-        self.cpu_workload_model.setTable("CpuWorkload")
-        self.cpu_workload_model.select()
-        self.system_events_model.setTable("SystemEvents")
-        self.system_events_model.select()
-
-        # Set models for table views
-        self.cpu_workload_table.setModel(self.cpu_workload_model)
-        self.system_events_table.setModel(self.system_events_model)
-
-        # Adjust column widths
-        for view in [self.cpu_workload_table, self.system_events_table]:
-            header = view.horizontalHeader()
-            header.setSectionResizeMode(QHeaderView.ResizeToContents)
-
-    def create_button(self, name, callback):
-        button = QPushButton(name)
-        button.setFixedWidth(100)
-        # noinspection PyUnresolvedReferences
-        button.clicked.connect(callback)
-        self.button_panel_layout.addWidget(button)
-
     def create_db(self):
-        name = "CpuMetrics"
-        if os.path.exists(name) and self.rewrite_database is False:
-            self.db = QSqlDatabase.addDatabase("QSQLITE")
-            self.db.setDatabaseName(name)
-            if not self.db.open():
-                print("Failed to open database!")
-                return
-            else:
-                print("Database opened successfully!")
-                # Setup table models after database open
-                self.setup_table_models()
-                return
 
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Create Database")
-        layout = QVBoxLayout()
+        print("Creating database:", self.database_name)
+        if os.path.exists(self.database_name) and self.rewrite_database is False:
+            print("Database file already exists, exiting")
+            return
+        elif os.path.exists(self.database_name) and self.rewrite_database is True:
+            print("Database file already exists, delete")
+            os.remove(self.database_name)
 
-        label = QLabel("Database Name:")
-        edit = QLineEdit(name)
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.db = QSqlDatabase.addDatabase("QSQLITE")
+        self.db.setDatabaseName(self.database_name)
+        if not self.db.open():
+            print("Failed to create database")
+        else:
+            print("Database created successfully")
+            self.create_tables()
+            self.setup_table_models()
 
-        def create():
-            db_name = edit.text()
-            if os.path.exists(db_name) and self.rewrite_database is False:
-                print("Database file already exists, exiting")
-                dialog.reject()
-                return
-            elif os.path.exists(db_name) and self.rewrite_database is True:
-                print("Database file already exists, delete")
-                os.remove(db_name)
-
-            self.db = QSqlDatabase.addDatabase("QSQLITE")
-            self.db.setDatabaseName(db_name)
-            if not self.db.open():
-                print("Failed to create database!")
-            else:
-                print("Database created successfully!")
-                self.create_tables()
-                self.setup_table_models()  # Setup table models after database creation
-                dialog.accept()
-
-        # noinspection PyUnresolvedReferences
-        buttons.accepted.connect(create)
-        # noinspection PyUnresolvedReferences
-        buttons.rejected.connect(dialog.reject)
-
-        layout.addWidget(label)
-        layout.addWidget(edit)
-        layout.addWidget(buttons)
-
-        dialog.setLayout(layout)
-        dialog.exec_()
+    def open_db(self):
+        """
+        Open existing SQLite database
+        """
+        self.db = QSqlDatabase.addDatabase("QSQLITE")
+        self.db.setDatabaseName(self.database_name)
+        if not self.db.open():
+            print("Failed to open database")
+        else:
+            print("Database opened successfully")
+            self.setup_table_models()
 
     def setup_table_models(self):
         # Set up table models
@@ -138,7 +97,6 @@ class DatabaseWidget(QWidget):
         cpu_workload_width = self.cpu_workload_table.width()
         system_events_width = self.system_events_table.width()
 
-        # Calculate the column width for CPU Workload Table
         cpu_workload_column_width = cpu_workload_width / self.cpu_workload_model.columnCount()
         for col in range(self.cpu_workload_model.columnCount()):
             self.cpu_workload_table.setColumnWidth(col, cpu_workload_column_width)
@@ -147,6 +105,13 @@ class DatabaseWidget(QWidget):
         system_events_column_width = system_events_width / self.system_events_model.columnCount()
         for col in range(self.system_events_model.columnCount()):
             self.system_events_table.setColumnWidth(col, system_events_column_width)
+
+    def create_button(self, name, callback):
+        button = QPushButton(name)
+        button.setFixedWidth(100)
+        # noinspection PyUnresolvedReferences
+        button.clicked.connect(callback)
+        self.button_panel_layout.addWidget(button)
 
     def create_tables(self):
         query = QSqlQuery()

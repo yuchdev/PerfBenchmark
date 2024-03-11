@@ -1,5 +1,4 @@
 import json
-import os
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QTabWidget, QVBoxLayout, QAction
 
@@ -7,7 +6,7 @@ from process_management_widget import ProcessManagementWidget
 from cpu_chart_widget import CPUChartWidget
 from cpu_watcher import CPUWatcher
 from database_widget import DatabaseWidget
-from settings_widget import SettingsWidget, DEFAULT_SETTINGS
+from settings_widget import SettingsWidget
 
 
 # noinspection PyPep8Naming
@@ -34,8 +33,9 @@ class MainWindow(QMainWindow):
         screen_width = desktop.width()
         screen_height = desktop.height()
         self.setGeometry(20, 20, int(screen_width * 0.9), int(screen_height * 0.8))
+        self.settings = None
 
-        self.settings = self.load_settings()
+        self.load_settings()
 
         # Widgets
         self.cpu_watcher = cpu_watcher
@@ -66,6 +66,12 @@ class MainWindow(QMainWindow):
         self.cpu_watcher.stopped.connect(self.thread_stopped)
 
         self.create_menu()
+
+    def load_settings(self):
+        print('MainWindows.load_settings()')
+        with open(self.SETTINGS_FILE, 'r') as file:
+            self.settings = json.load(file)
+            print(f'Init with settings: {self.settings}')
 
     def create_menu(self):
         menubar = self.menuBar()
@@ -110,36 +116,14 @@ class MainWindow(QMainWindow):
         """
         self.close()
 
-    def load_settings(self):
-        """
-        Load settings from settings.json, if file doesn't exist, create it with default settings
-        """
-        if not os.path.isfile(self.SETTINGS_FILE):
-            with open(self.SETTINGS_FILE, "w") as f:
-                json.dump(DEFAULT_SETTINGS, f)
-
-        with open(self.SETTINGS_FILE, "r") as f:
-            settings = json.load(f)
-
-        return settings
-
-    def save_settings(self):
-        """
-        Save settings to settings.json
-        """
-        settings_widget = SettingsWidget()
-        current_settings = settings_widget.get_settings()
-        with open(self.SETTINGS_FILE, "w") as f:
-            json.dump(current_settings, f)
-
     def show_settings(self):
         """
         Show settings window
         """
-        settings_widget = SettingsWidget(self)
-        settings_widget.set_settings(self.settings)
+        settings_widget = SettingsWidget(settings_file=self.SETTINGS_FILE, parent=self)
+        print(f'Showing settings window with settings: {self.settings}')
         if settings_widget.exec_():
-            self.settings = settings_widget.get_settings()
+            self.load_settings()
 
 
 def main():
