@@ -1,9 +1,9 @@
 import os
+import zipfile
+from datetime import datetime
 
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QTableView, QDialog
-from PyQt5.QtWidgets import QLabel, QLineEdit, QDialogButtonBox
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery, QSqlTableModel
-from PyQt5.QtWidgets import QHeaderView
 
 
 class DatabaseWidget(QWidget):
@@ -39,7 +39,8 @@ class DatabaseWidget(QWidget):
         # Horizontal panel for buttons
         self.button_panel_layout = QHBoxLayout()
         self.create_button("Create", self.create_db)
-        self.create_button("Insert", self.test_insert)
+        self.create_button("Cleanup", self.cleanup_db)
+        self.create_button("Backup", self.backup_db)
         self.layout.addLayout(self.button_panel_layout)
 
         # Table views for CpuWorkload and SystemEvents
@@ -48,6 +49,10 @@ class DatabaseWidget(QWidget):
         self.models_layout.addWidget(self.cpu_workload_table)
         self.models_layout.addWidget(self.system_events_table)
         self.layout.addLayout(self.models_layout)
+
+        # Column height
+        self.cpu_workload_table.verticalHeader().setDefaultSectionSize(10)
+        self.system_events_table.verticalHeader().setDefaultSectionSize(10)
 
     def create_db(self):
 
@@ -67,6 +72,29 @@ class DatabaseWidget(QWidget):
             print("Database created successfully")
             self.create_tables()
             self.setup_table_models()
+
+    def cleanup_db(self):
+        """
+        Cleanup all data from the database
+        """
+        query = QSqlQuery()
+        query.exec_("DELETE FROM CpuWorkload")
+        query.exec_("DELETE FROM SystemEvents")
+        if query.lastError().isValid():
+            print("Failed to cleanup database:", query.lastError().text())
+        else:
+            print("Database cleaned up successfully!")
+            self.cpu_workload_model.select()
+            self.system_events_model.select()
+
+    def backup_db(self):
+        """
+        Archive the database file with name CpuMetrics-YYYYMMDD-HHMMSS.zip
+        """
+        backup_file = f"CpuMetrics-{datetime.now().strftime('%Y%m%d-%H%M%S')}.zip"
+        with zipfile.ZipFile(backup_file, "w") as backup:
+            backup.write(self.database_name)
+        print(f"Database backed up to {backup_file}")
 
     def open_db(self):
         """
@@ -97,12 +125,12 @@ class DatabaseWidget(QWidget):
         cpu_workload_width = self.cpu_workload_table.width()
         system_events_width = self.system_events_table.width()
 
-        cpu_workload_column_width = cpu_workload_width / self.cpu_workload_model.columnCount()
+        cpu_workload_column_width = (cpu_workload_width / self.cpu_workload_model.columnCount()) * 0.8
         for col in range(self.cpu_workload_model.columnCount()):
             self.cpu_workload_table.setColumnWidth(col, cpu_workload_column_width)
 
         # Calculate the column width for System Events Table
-        system_events_column_width = system_events_width / self.system_events_model.columnCount()
+        system_events_column_width = (system_events_width / self.system_events_model.columnCount()) * 0.8
         for col in range(self.system_events_model.columnCount()):
             self.system_events_table.setColumnWidth(col, system_events_column_width)
 
@@ -122,13 +150,12 @@ class DatabaseWidget(QWidget):
         else:
             print("Tables created successfully!")
 
-    def insert_metric(self, cpu_usage_history):
+    def insert_cpu_workload(self, cpu_usage):
         """
         Inserts a new metric record into the CpuWorkload table
-        :param cpu_usage_history: dictionary containing CPU usage data
+        :param cpu_usage: dictionary containing CPU usage data
         """
         # Prepare the query to insert the record
-        cpu_usage = cpu_usage_history[-1]
         query = QSqlQuery()
         query.prepare(
             "INSERT INTO CpuWorkload (Timestamp, PID, ProcessName, Workload) "
@@ -136,8 +163,8 @@ class DatabaseWidget(QWidget):
         )
         query.bindValue(":timestamp", cpu_usage['timestamp'])
         query.bindValue(":pid", cpu_usage['pid'])
-        query.bindValue(":process_name", cpu_usage['process_name'])
-        query.bindValue(":workload", cpu_usage['workload'])
+        query.bindValue(":process_name", cpu_usage['name'])
+        query.bindValue(":workload", cpu_usage['usage'])
 
         # Execute the query
         if not query.exec_():
@@ -147,9 +174,3 @@ class DatabaseWidget(QWidget):
 
             # Refresh the model to update the view with the new data
             self.cpu_workload_model.select()
-
-    def test_insert(self):
-        test_cpu_payload = [
-            {"timestamp": 1, "pid": 1, "process_name": "test1", "workload": 1.1},
-        ]
-        self.insert_cpu_workload(test_cpu_payload)

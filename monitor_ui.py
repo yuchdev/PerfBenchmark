@@ -62,7 +62,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(tab_widget)
 
         self.cpu_watcher.new_data.connect(self.cpu_chart_widget.update_chart)
-        self.cpu_watcher.insert_record.connect(self.database_widget.insert_metric)
+        self.cpu_watcher.insert_record.connect(self.database_widget.insert_cpu_workload)
         self.cpu_watcher.stopped.connect(self.thread_stopped)
 
         self.create_menu()

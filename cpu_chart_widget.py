@@ -30,7 +30,8 @@ class CPUChartWidget(QWidget):
         """
         self.cpu_ax.clear()
         for pid, usage_tuple in cpu_usage_history[-1].items():
-            usage, _ = usage_tuple  # Unpack the tuple
+            # Unpack the tuple
+            usage, _ = usage_tuple
             self.cpu_ax.plot(
                 range(len(cpu_usage_history)), [
                     process_usage.get(pid, 0)[0] for process_usage in cpu_usage_history

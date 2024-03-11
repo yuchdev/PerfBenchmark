@@ -65,9 +65,17 @@ class CPUWatcher(QThread):
             while self.is_paused:  # Check if the thread is paused
                 time.sleep(1)
             cpu_usage = self.get_cpu_usage()
-            print(f'cpu_usage={cpu_usage}')
             self.cpu_usage_history.append(cpu_usage)
             self.new_data.emit(self.cpu_usage_history)
+
+            # repack CPU usage data to be inserted into the database:
+            # {pid: (usage, timestamp)} -> {pid: (usage, timestamp, name)}
+            for pid, (usage, timestamp) in cpu_usage.items():
+                process_name = self.process_dict[pid]
+                self.insert_record.emit(
+                    {'pid': pid, 'usage': usage, 'timestamp': timestamp, 'name': process_name}
+                )
+
             time.sleep(self.interval)
         self.stopped.emit()
 
