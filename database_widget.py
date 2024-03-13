@@ -13,7 +13,7 @@ class DatabaseWidget(QWidget):
                           "(ID INTEGER PRIMARY KEY AUTOINCREMENT, " \
                           "Timestamp INTEGER, PID INTEGER, ProcessName TEXT, Workload REAL)"
     CREATE_SYSTEM_EVENTS = "CREATE TABLE IF NOT EXISTS SystemEvents " \
-                           "(ID INTEGER PRIMARY KEY AUTOINCREMENT, Timestamp TEXT, Event TEXT)"
+                           "(ID INTEGER PRIMARY KEY AUTOINCREMENT, Timestamp INTEGER, Event TEXT)"
     INSERT_CPU_WORKLOAD = "INSERT INTO CpuWorkload (Timestamp, PID, ProcessName, Workload) " \
                           "VALUES (:timestamp, :pid, :process_name, :workload)"
 

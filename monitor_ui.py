@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QTabWidget, QVBoxLayout, QAction
 
@@ -9,6 +10,14 @@ from database_widget import DatabaseWidget
 from settings_widget import SettingsWidget
 
 
+def appdata_local_path():
+    """
+    Get the path to the local app data folder
+    :return: str
+    """
+    return os.path.join(os.getenv('LOCALAPPDATA'), "CPUUsageMonitor")
+
+
 # noinspection PyPep8Naming
 class MainWindow(QMainWindow):
     """
@@ -16,7 +25,7 @@ class MainWindow(QMainWindow):
     Assume width 90% of screen width and height 80% of screen height
     """
 
-    SETTINGS_FILE = "settings.json"
+    SETTINGS_FILENAME = "settings.json"
 
     def __init__(self, cpu_watcher: CPUWatcher):
         """
@@ -34,6 +43,7 @@ class MainWindow(QMainWindow):
         screen_height = desktop.height()
         self.setGeometry(20, 20, int(screen_width * 0.9), int(screen_height * 0.8))
         self.settings = None
+        self.settings_file = os.path.join(appdata_local_path(), self.SETTINGS_FILENAME)
 
         self.load_settings()
 
@@ -69,7 +79,7 @@ class MainWindow(QMainWindow):
 
     def load_settings(self):
         print('MainWindows.load_settings()')
-        with open(self.SETTINGS_FILE, 'r') as file:
+        with open(self.settings_file, 'r') as file:
             self.settings = json.load(file)
             print(f'Init with settings: {self.settings}')
 
@@ -120,7 +130,7 @@ class MainWindow(QMainWindow):
         """
         Show settings window
         """
-        settings_widget = SettingsWidget(settings_file=self.SETTINGS_FILE, parent=self)
+        settings_widget = SettingsWidget(settings_file=self.settings_file, parent=self)
         print(f'Showing settings window with settings: {self.settings}')
         if settings_widget.exec_():
             self.load_settings()
