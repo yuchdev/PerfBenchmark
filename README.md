@@ -22,10 +22,12 @@ The application follows a modular architecture, consisting of several components
 * Download portable python archive from the [official Python website](https://www.python.org/ftp/python/3.10.10/python-3.10.10-embed-amd64.zip)
 * Unpack the archive
 * Unpack the contents of the repository into the same directory
-* Create virtual environment: `./python.exe -m venv venv` (here and further assume PS shell)
-* Activate the virtual environment: `./venv/Scripts/activate.ps1`
-* Install dependencies: `./python.exe -m pip install -r requirements.txt`
-* Run the application: `./python.exe ./monitor_ui.py`
+* `set PATH=%PATH%;%CD%`
+* Install virtual environment: `.\pip.exe install -y virtualenv`
+* Create virtual environment: `.\python.exe -m venv venv` (here and further assume PS shell)
+* Activate the virtual environment: `.\venv\Scripts\activate.ps1`
+* Install dependencies: `.\python.exe -m pip install -r requirements.txt`
+* Run the application: `.\python.exe .\monitor_ui.py`
 
 ## Dependencies
 - PyQt5: Python binding for the Qt framework, used for building the GUI.

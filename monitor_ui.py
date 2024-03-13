@@ -7,7 +7,7 @@ from process_management_widget import ProcessManagementWidget
 from cpu_chart_widget import CPUChartWidget
 from cpu_watcher import CPUWatcher
 from database_widget import DatabaseWidget
-from settings_widget import SettingsWidget
+from settings_widget import SettingsWidget, DEFAULT_SETTINGS
 
 
 def appdata_local_path():
@@ -15,7 +15,7 @@ def appdata_local_path():
     Get the path to the local app data folder
     :return: str
     """
-    return os.path.join(os.getenv('LOCALAPPDATA'), "CPUUsageMonitor")
+    return os.path.join(os.getenv('LOCALAPPDATA'), "cpu-usage-monitor")
 
 
 # noinspection PyPep8Naming
@@ -77,8 +77,21 @@ class MainWindow(QMainWindow):
 
         self.create_menu()
 
+    def create_default(self):
+        """
+        Create default settings
+        """
+        if not os.path.isdir(os.path.join(appdata_local_path(), 'cpu-usage-monitor')):
+            os.makedirs(os.path.join(appdata_local_path(), 'cpu-usage-monitor'))
+
+        if not os.path.isfile(self.settings_file):
+            with open(self.settings_file, 'w') as file:
+                print(f'Created settings file: {self.settings_file} with default settings')
+                json.dump(DEFAULT_SETTINGS, file)
+
     def load_settings(self):
         print('MainWindows.load_settings()')
+        self.create_default()
         with open(self.settings_file, 'r') as file:
             self.settings = json.load(file)
             print(f'Init with settings: {self.settings}')
